@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import os
 import Books2Text as BB
 from gtts import gTTS
 import threading as t
@@ -7,9 +8,14 @@ from tkinter import *
 from tkinter import scrolledtext
 from tkinter import filedialog
 import vlc
+import time
 page = 0
 file = ""
+titleb= ""
+pause = 0
 main=tk.Tk()
+p = vlc.MediaPlayer()
+
 
 class FullScreenApp(object):
     def __init__(self, master, **kwargs):
@@ -36,51 +42,72 @@ GPIO.setup(24, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 
 
+
+
 main.title("EBOOK READER")
 main.geometry('900x300')
 main.configure(background='ivory3')
 
 
 def play():
-    global title
+    global titlep, p, pause
     content = viewer.get(1.0, END)
-    tts = gTTS(text=content, lang='en')
-    tts.save('file.mp3')
-    p = vlc.MediaPlayer("file.mp3")
+    if not(titlep+".mp3" in os.listdir("audio")):
+        print("audio not found, creating audio")
+        title.config(text="CONVERTING....")
+        tts = gTTS(text=content, lang='en')
+        tts.save("audio"+"/"+titlep+'.mp3')
     if p.is_playing() == 1:
-        p.stop()
-        title.config(text="STOPPING...")
-    else:
+        p.pause()
+        pause = 1
+        print("Paused...")
+        title.config(text="PAUSED")
+
+    elif pause == 1: # if it is paused
         p.play()
+        pause=0
+        print("resume..")
         title.config(text="PLAYING....")
 
+    else: #not playing and wasnt paused
+        p = vlc.MediaPlayer("audio"+"/"+titlep+'.mp3')
+        p.play()
+        pause = 0
+        print("playing....")
+        title.config(text="PLAYING....")
+
+
+
+
 def load_book():
-    global viewer, page
+    global viewer, page, titleb, titlep
     global book
     book = BB.Book(file)
     page = 0
+    titleb = book.title
+    titlep = titleb + str(page)
     txt = book.text[page]
     viewer.delete(1.0, END)
     viewer.insert(END, txt)
-    title.config(text=file)
+    title.config(text=titleb)
 
 
 def previous_p():
-    global page, viewer
+    global page, viewer,titleb,titlep
     if not page <= 0:
         page = page - 1
        # print ("page", page)
         viewer.delete(1.0, END)
         viewer.insert(tk.INSERT, book.text[page])
+        titlep = titleb + str(page)
 
 def next_p():
-    global page, viewer
+    global page, viewer, titlep, titleb
     if not page >= len(book.text)-1:
-        page = page + 1
+        titlep = titleb + str(page)
         #print("page", page)
         viewer.delete(1.0, END)
         viewer.insert(tk.INSERT, book.text[page])
-
 
 
 def buttons():
@@ -92,6 +119,7 @@ def buttons():
             next_p()
         elif presses["previous"] == 0:
             previous_p()
+        time.sleep(0.8)
 
 
 def select_file():
@@ -111,8 +139,8 @@ viewer.pack(side=TOP)
 viewer.config(background="light grey", foreground="black", font='times 12 bold', wrap='word')
 
 # buttons
-# b_play = Button(main, text = 'PLAY', bg='ivory2', width = 10, command =play).pack(side=TOP)
-# b_stop = Button(main, text = 'STOP', bg='ivory2', width = 10, command =stop).pack(side=TOP)
+#b_play = Button(main, text = 'PLAY', bg='ivory2', width = 10, command =play).pack(side=TOP)
+#b_stop = Button(main, text = 'STOP', bg='ivory2', width = 10, command =play).pack(side=TOP)
 
 
 t.Thread(target=buttons).start()

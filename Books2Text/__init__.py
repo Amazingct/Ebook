@@ -2,6 +2,8 @@ import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 import PyPDF2
+import docx2txt
+
 
 def epub2thtml(epub_path):
     book = epub.read_epub(epub_path)
@@ -11,7 +13,8 @@ def epub2thtml(epub_path):
             chapters.append(item.get_content())
     return chapters
 
-blacklist = [
+blacklist = \
+    [
 	'[document]',
 	'noscript',
 	'header',
@@ -51,11 +54,12 @@ out = epub2text('books/sample.epub')
 
 class Book:
     def __init__(self, bk):
+        b = bk.split("/")[-1]
+        self.title = b[:b.find(".")]
 
         if bk.endswith("epub"):
             print("EPUB file detected")
             self.author = ''
-            self.title = epub.read_epub(bk).title
             self.pages = epub.read_epub(bk).pages
             out = epub2text(bk)
             final = []
@@ -77,3 +81,7 @@ class Book:
                 text = page.extractText()
                 final.append(text)
             self.text = final
+
+        if bk.endswith("docx") or bk.endswith("doc"):
+            out = docx2txt.process(bk)
+            self.text = [out]
