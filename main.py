@@ -10,6 +10,7 @@ from tkinter import filedialog
 import vlc
 import time
 page = 0
+play_page = 0
 file = ""
 titleb= ""
 pause = 0
@@ -49,32 +50,48 @@ main.geometry('900x300')
 main.configure(background='ivory3')
 
 
-def play():
-    global titlep, p, pause
-    content = viewer.get(1.0, END)
-    if not(titlep+".mp3" in os.listdir("audio")):
-        print("audio not found, creating audio")
-        title.config(text="CONVERTING....")
-        tts = gTTS(text=content, lang='en')
-        tts.save("audio"+"/"+titlep+'.mp3')
-    if p.is_playing() == 1:
-        p.pause()
-        pause = 1
-        print("Paused...")
-        title.config(text="PAUSED")
+def play(stop=0):
+    global titlep, p, pause, play_page
+    if stop == 1:
+        try:
+            p.stop()
+            title.config(text="STOPPED")
+        except:
+           print("stop not possible")
+    else:
+        content = viewer.get(1.0, END)
+        if not(titlep+".mp3" in os.listdir("audio")):
+            print("audio not found, creating audio")
+            title.config(text="CONVERTING....")
+            tts = gTTS(text=content, lang='en')
+            tts.save("audio"+"/"+titlep+'.mp3')
+            play_page = page
+        if p.is_playing() == 1 and page==play_page:
+            p.pause()
+            pause = 1
+            print("Paused...")
+            title.config(text="PAUSED")
+        elif p.is_playing() == 1 and not  page==play_page:
+            p.stop()
+            play_page=page
+            p = vlc.MediaPlayer("audio"+"/"+titlep+'.mp3')
+            p.play()
+            pause = 0
+            print("playing....")
+            title.config(text="PLAYING....")
+        elif pause == 1: # if it is paused
+            p.play()
+            pause=0
+            print("resume..")
+            title.config(text="PLAYING....")
 
-    elif pause == 1: # if it is paused
-        p.play()
-        pause=0
-        print("resume..")
-        title.config(text="PLAYING....")
-
-    else: #not playing and wasnt paused
-        p = vlc.MediaPlayer("audio"+"/"+titlep+'.mp3')
-        p.play()
-        pause = 0
-        print("playing....")
-        title.config(text="PLAYING....")
+        else: #not playing and wasnt paused
+            play_page=play
+            p = vlc.MediaPlayer("audio"+"/"+titlep+'.mp3')
+            p.play()
+            pause = 0
+            print("playing....")
+            title.config(text="PLAYING....")
 
 
 
@@ -93,19 +110,20 @@ def load_book():
 
 
 def previous_p():
-    global page, viewer,titleb,titlep
+    global page, viewer,titleb,titlep,book
     if not page <= 0:
         page = page - 1
-       # print ("page", page)
+        print ("page", page)
         viewer.delete(1.0, END)
         viewer.insert(tk.INSERT, book.text[page])
         titlep = titleb + str(page)
 
 def next_p():
-    global page, viewer, titlep, titleb
+    global page, viewer, titlep, titleb,book
     if not page >= len(book.text)-1:
+        page = page + 1
         titlep = titleb + str(page)
-        #print("page", page)
+        print("page", page)
         viewer.delete(1.0, END)
         viewer.insert(tk.INSERT, book.text[page])
 
@@ -113,14 +131,16 @@ def next_p():
 def buttons():
     while 1:
         presses = { "play": GPIO.input(25), "next": GPIO.input(12), "previous": GPIO.input(24)}
-        if presses["play"] == 0:
+        if presses["previous"] == 0 and presses["next"] == 0:
+            play(1)
+        elif presses["play"] == 0:
             play()
         elif presses["next"] == 0:
             next_p()
         elif presses["previous"] == 0:
             previous_p()
-        time.sleep(0.8)
-
+        time.sleep(0.15)
+ 
 
 def select_file():
     global file
